@@ -1,0 +1,74 @@
+<html>
+    <head>
+        <title>WOOF!</title>
+    </head>
+    <body>
+        <svg width="100%" height="100%">
+            <path id="shape" d="M 0 0 L 100 100 L 0 50 Z" stroke="black" fill="transparent" />
+        </svg>
+
+        <script>
+
+
+            function Bough(prev, angle) {
+                const boughs = [];
+
+                let growth = 6;
+
+                this.grow = (v) => {
+                    growth *= 1.02;
+
+                    boughs.forEach(b => b.grow(v))
+
+                    const chance = boughs.length == 0 ? 0.05 : (0.05 / boughs.length)
+                    if(Math.random() < chance) {
+                        const angleOfGrowth = Math.random() * 2 - 1;
+                        boughs.push(new Bough(this, angleOfGrowth))
+                    } 
+                }
+
+                this.render = (startX, startY, startA) => {
+                    const a = startA + angle
+                    const x = startX + Math.round(Math.sin(a) * growth)
+                    const y = startY - Math.round(Math.cos(a) * growth)
+
+                    const inner = boughs.map(b => b.render(x, y, a)).join(' ')
+                    return `L${x} ${y} ${inner} L${startX} ${startY}`
+                }
+            }
+
+
+            function Tree() {
+                const boughs = [new Bough(this, 0)];
+
+                this.grow = (v) => {
+                    boughs.forEach(b => b.grow(v))
+                }
+
+                this.render = (x, y) => {
+                    const inner = boughs.map(b => b.render(x, y, 0)).join(' ')
+                    return `M ${x} ${y} ${inner} Z`
+                }
+            }
+            
+
+            window.onload = () => {
+                const shape = document.getElementById('shape');
+                const d = shape.attributes.getNamedItem('d');
+
+                const tree = new Tree();
+
+                function tick() {
+                    tree.grow(1);
+                    d.value = tree.render(600, 600);
+                }
+
+                setInterval(tick, 150);
+            };
+        </script>
+
+
+
+
+    </body>
+</html>
