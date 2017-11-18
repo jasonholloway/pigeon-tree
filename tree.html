@@ -9,45 +9,107 @@
 
         <script>
 
+            const l = 40
+            const d = 1.5
 
-            function Bough(prev, angle) {
-                const boughs = [];
 
-                let growth = 6;
+            function Lunge(origAngle) {
+                let next = null;
+                const branches = [];
 
-                this.grow = (v) => {
-                    growth *= 1.02;
+                let g = 0.2;
+                let isFresh = true;
 
-                    boughs.forEach(b => b.grow(v))
+                let a;
+                let x0, y0, x1, y1;
 
-                    const chance = boughs.length == 0 ? 0.05 : (0.05 / boughs.length)
-                    if(Math.random() < chance) {
-                        const angleOfGrowth = Math.random() * 2 - 1;
-                        boughs.push(new Bough(this, angleOfGrowth))
-                    } 
+                this.grow = (baseX, baseY, baseA) => {
+                    a = baseA + origAngle
+
+                    x0 = baseX;
+                    y0 = baseY;
+
+                    x1 = x0 + Math.round(Math.sin(a) * g)
+                    y1 = y0 - Math.round(Math.cos(a) * g)
+
+                    if(!isFresh && next == null) {
+                        const lungeAngle = a + (Math.random() * 0.2 - 0.4);
+                        next = new Lunge(lungeAngle);
+                    }
+
+                    next && next.grow(x1, y1, a);                    
+                    g += (d - (d * Math.cos(2 * Math.sqrt((10 / l) * g)))) / 2;
+                    isFresh = false;
                 }
 
-                this.render = (startX, startY, startA) => {
-                    const a = startA + angle
-                    const x = startX + Math.round(Math.sin(a) * growth)
-                    const y = startY - Math.round(Math.cos(a) * growth)
+                this.render = () => {
+                    if(isFresh) return;
 
-                    const inner = boughs.map(b => b.render(x, y, a)).join(' ')
-                    return `L${x} ${y} ${inner} L${startX} ${startY}`
+                    const inner = next != null 
+                                    ? next.render()
+                                    : '';
+
+                    return `T ${x1} ${y1} ${inner} M ${x0} ${y0}`
+
+                    // const a = baseA + angle
+                    // const x = baseX + Math.round(Math.sin(a) * g)
+                    // const y = baseY - Math.round(Math.cos(a) * g)
+
+                    // const inner = branches.map(b => b.render(x, y, a)).join(' ')
+                    // return `L${x} ${y} ${inner} L${baseX} ${baseY}`
+                }                
+            }
+
+
+
+            function Branch(origAngle) {
+                let next = null;
+                let isFresh = true;
+
+                let g = 0.2;
+
+                let a;
+                let x0, y0, x1, y1;
+
+                this.grow = (baseX, baseY, baseA) => {
+                    a = baseA + origAngle
+
+                    x0 = baseX;
+                    y0 = baseY;
+
+                    x1 = x0 + Math.round(Math.sin(a) * g)
+                    y1 = y0 - Math.round(Math.cos(a) * g)
+
+                    if(!isFresh && next == null) {
+                        const lungeAngle = a + (Math.random() * 0.05 - 0.1);
+                        next = new Lunge(lungeAngle);
+                    }
+                    
+                    next && next.grow(x1, y1, a);
+                    g += (d - (d * Math.cos(2 * Math.sqrt((10 / l) * g)))) / 2;
+                    isFresh = false;
+                }
+
+                this.render = () => {
+                    const inner = next != null 
+                                    ? next.render()
+                                    : '';
+
+                    return `Q ${x1} ${y1} ${x1} ${y1} ${inner} M ${x0} ${y0}`
                 }
             }
 
 
-            function Tree() {
-                const boughs = [new Bough(this, 0)];
+            function Tree(startX, startY) {
+                const trunk = new Branch(0);
 
-                this.grow = (v) => {
-                    boughs.forEach(b => b.grow(v))
+                this.grow = () => {
+                    trunk.grow(startX, startY, 0);
                 }
 
-                this.render = (x, y) => {
-                    const inner = boughs.map(b => b.render(x, y, 0)).join(' ')
-                    return `M ${x} ${y} ${inner} Z`
+                this.render = () => {
+                    const inner = trunk.render();
+                    return `M ${startX} ${startY} ${inner} Z`
                 }
             }
             
@@ -56,11 +118,11 @@
                 const shape = document.getElementById('shape');
                 const d = shape.attributes.getNamedItem('d');
 
-                const tree = new Tree();
+                const tree = new Tree(500, 500);
 
                 function tick() {
-                    tree.grow(1);
-                    d.value = tree.render(600, 600);
+                    tree.grow();
+                    d.value = tree.render();
                 }
 
                 setInterval(tick, 150);
