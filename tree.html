@@ -3,14 +3,18 @@
         <title>WOOF!</title>
     </head>
     <body>
-        <svg width="100%" height="100%">
+
+        <canvas id="canvas" width="700px" height="700px" style="position:absolute;left:0;top:0">
+        </canvas>
+
+        <svg style="position:absolute;left:0;top:0" width="700px" height="700px">
             <path id="shape" d="M 0 0 L 100 100 L 0 50 Z" stroke="black" fill="transparent" />
         </svg>
 
         <script>
 
-            const l = 40
-            const d = 1.5
+            const l = 10
+            const d = 0.7
 
 
             function Lunge(origAngle) {
@@ -18,45 +22,49 @@
                 const branches = [];
 
                 let g = 0.2;
-                let isFresh = true;
+                let v = 0;
 
                 let a;
                 let x0, y0, x1, y1;
+                let dx1, dy1;
 
                 this.grow = (baseX, baseY, baseA) => {
-                    a = baseA + origAngle
+                    a = (baseA + origAngle) % Math.PI
 
                     x0 = baseX;
                     y0 = baseY;
 
-                    x1 = x0 + Math.round(Math.sin(a) * g)
-                    y1 = y0 - Math.round(Math.cos(a) * g)
+                    x1 = x0 + (Math.sin(a) * g)
+                    y1 = y0 - (Math.cos(a) * g)
 
-                    if(!isFresh && next == null) {
-                        const lungeAngle = a + (Math.random() * 0.2 - 0.4);
+                    dx1 = x0 + ((x1 - x0) * 0.9)
+                    dy1 = y0 + ((y1 - y0) * 0.9)
+
+                    if(v > 10 && next == null) {
+                        const lungeAngle = -0.3 * a
                         next = new Lunge(lungeAngle);
                     }
 
+                    if(v > 10 && branches.length == 0 && Math.random() > 0.99) {
+                        if(Math.random() > 0.5) branches.push(new Branch(Math.PI / 2));
+                        else branches.push(new Branch(-Math.PI / 2));
+                    }
+
+                    branches && branches.forEach(b => b.grow(x1, y1, a))
+
                     next && next.grow(x1, y1, a);                    
                     g += (d - (d * Math.cos(2 * Math.sqrt((10 / l) * g)))) / 2;
-                    isFresh = false;
+                    v++;
                 }
 
                 this.render = () => {
-                    if(isFresh) return;
+                    if(v == 0) return;
 
-                    const inner = next != null 
-                                    ? next.render()
-                                    : '';
+                    const nextPath = (next && next.render()) || '';
 
-                    return `T ${x1} ${y1} ${inner} M ${x0} ${y0}`
+                    const branchPath = branches.map(b => b.render()).join(' ')
 
-                    // const a = baseA + angle
-                    // const x = baseX + Math.round(Math.sin(a) * g)
-                    // const y = baseY - Math.round(Math.cos(a) * g)
-
-                    // const inner = branches.map(b => b.render(x, y, a)).join(' ')
-                    // return `L${x} ${y} ${inner} L${baseX} ${baseY}`
+                    return `S ${dx1} ${dy1} ${x1} ${y1} ${nextPath} M ${x0} ${y0} ${branchPath}`
                 }                
             }
 
@@ -64,30 +72,37 @@
 
             function Branch(origAngle) {
                 let next = null;
-                let isFresh = true;
-
+                let v = 0;
+             
                 let g = 0.2;
 
                 let a;
                 let x0, y0, x1, y1;
+                let dx0, dy0, dx1, dy1;
 
                 this.grow = (baseX, baseY, baseA) => {
-                    a = baseA + origAngle
+                    a = (baseA + origAngle) % Math.PI
 
                     x0 = baseX;
                     y0 = baseY;
 
-                    x1 = x0 + Math.round(Math.sin(a) * g)
-                    y1 = y0 - Math.round(Math.cos(a) * g)
+                    x1 = x0 + (Math.sin(a) * g)
+                    y1 = y0 - (Math.cos(a) * g)
 
-                    if(!isFresh && next == null) {
-                        const lungeAngle = a + (Math.random() * 0.05 - 0.1);
+                    dx0 = x0 + ((x1 - x0) * 0.45)
+                    dy0 = y0 + ((y1 - y0) * 0.45)
+
+                    dx1 = x0 + ((x1 - x0) * 0.55)
+                    dy1 = y0 + ((y1 - y0) * 0.55)
+
+                    if(v > 10 && next == null) {
+                        const lungeAngle = -0.3 * a
                         next = new Lunge(lungeAngle);
                     }
-                    
-                    next && next.grow(x1, y1, a);
+
+                    next && next.grow(x1, y1, a);                    
                     g += (d - (d * Math.cos(2 * Math.sqrt((10 / l) * g)))) / 2;
-                    isFresh = false;
+                    v++;
                 }
 
                 this.render = () => {
@@ -95,7 +110,7 @@
                                     ? next.render()
                                     : '';
 
-                    return `Q ${x1} ${y1} ${x1} ${y1} ${inner} M ${x0} ${y0}`
+                    return `M ${x0} ${y0} C ${dx0} ${dy0} ${dx1} ${dy1} ${x1} ${y1} ${inner} M ${x0} ${y0}`
                 }
             }
 
@@ -118,7 +133,7 @@
                 const shape = document.getElementById('shape');
                 const d = shape.attributes.getNamedItem('d');
 
-                const tree = new Tree(500, 500);
+                const tree = new Tree(300, 680);
 
                 function tick() {
                     tree.grow();
