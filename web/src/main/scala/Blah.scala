@@ -1,0 +1,4 @@
+
+object Blah {
+  println("blah")
+}
