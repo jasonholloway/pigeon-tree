@@ -1,4 +1,4 @@
 
 object Blah {
-  println("blah")
+  println("blah blah blah!")
 }
