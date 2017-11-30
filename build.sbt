@@ -5,27 +5,37 @@ val sharedSettings = Seq(
   scalaVersion := "2.12.4"
 )
 
+val jsSettings = Seq(
+  libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "0.9.2"
+)
+
+
 lazy val root = (project in file("."))
     .aggregate(trunkJS, trunkJVM, webJS)
 
 
 lazy val trunk = (crossProject in file("trunk"))
     .settings(sharedSettings ++ Seq(
-      name:= "sapling-trunk",
-      libraryDependencies ++= Seq(
-        "org.apache.thrift" % "libthrift" % "0.9.2",
-        "com.twitter" %% "scrooge-core" % "17.11.0" exclude("com.twitter", "libthrift")
-      )
+      name:= "sapling.trunk"
     ))
 
 lazy val trunkJS = trunk.js
 lazy val trunkJVM = trunk.jvm
 
+lazy val trunkShared = (project in file("trunk/shared"))
+    .settings(sharedSettings)
+    .dependsOn(trunkJVM)
+
 
 lazy val webJS = (project in file("web"))
-    .settings(sharedSettings ++ Seq(
-      name := "sapling-web",
-      localUrl := ("localhost", 7777)
+    .settings(sharedSettings ++ jsSettings ++ Seq(
+      name := "sapling.web",
+      localUrl := ("localhost", 7777),
+      scalaJSUseMainModuleInitializer := true,
+      mainClass in Compile := Some("com.woodpigeon.sapling.web.Main"),
+      libraryDependencies ++= Seq(
+        "org.scala-js" %%% "scalajs-dom" % "0.9.2"
+      )
     ))
     .dependsOn(trunkJS)
     .enablePlugins(ScalaJSPlugin, WorkbenchPlugin)
