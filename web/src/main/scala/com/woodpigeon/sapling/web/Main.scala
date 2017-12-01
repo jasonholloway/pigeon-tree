@@ -21,19 +21,18 @@ trait Extended {
 
 case class ExtendedBranch(branch: SproutingBranch, v0: Vector, v1: Vector, a: Double, children: List[Extended]) extends Extended {
 
-  private val growthRate = 0.8
+  private val growthRate = 0.7
   private val stature = 10
 
   override def grow(ctx: GrowContext): Option[Sprouting] = branch match {
-    case SproutingBranch(_, _, _, g, version)  =>
+    case SproutingBranch(_, _, g)  =>
       Some(branch.copy(
-        version = version + 1,
         g = g + (growthRate - (growthRate * Math.cos(2 * Math.sqrt((10 / stature) * g)))) / 2,
         children = {
           val grownChildren = children flatMap { _.grow(GrowContext(1)) }
 
           if(children.isEmpty) {
-            if(g > 7 && Math.random() > 0.97) {
+            if(g > 8 && Math.random() > 0.97) {
               SproutingBranch(-0.3 * a) :: grownChildren
             }
             else grownChildren
@@ -52,7 +51,7 @@ case class ExtendedBranch(branch: SproutingBranch, v0: Vector, v1: Vector, a: Do
 }
 
 
-case class SproutingBranch(aOrig: Double, children: List[Sprouting] = Nil, next: Option[Sprouting] = None, g: Double = 0.1, version: Int = 0) extends Sprouting {
+case class SproutingBranch(aOrig: Double, children: List[Sprouting] = Nil, g: Double = 0.2) extends Sprouting {
 
   override def project(ctx: ProjectContext): Option[Extended] = ctx match {
     case ProjectContext(v0@Vector(x0, y0), aBase) =>
@@ -74,7 +73,7 @@ case class SproutingBranch(aOrig: Double, children: List[Sprouting] = Nil, next:
 
 
 
-case class RenderContext(offset: Vector, first: Boolean = false)
+case class RenderContext(offset: Vector, first: Boolean = true)
 
 
 object Main {
@@ -84,7 +83,7 @@ object Main {
       el match {
         case ExtendedBranch(_, v0, v1, _, children) => {
           val inner = (children map {
-            render(RenderContext(offset), _)
+            render(RenderContext(offset, false), _)
           }).mkString
 
           (v0, v1) match {
@@ -95,7 +94,7 @@ object Main {
               val oy1 = offset.y - y1
 
               if (isFirst)
-                s"M$ox0 $oy0 ${inner}L$ox0 $oy0"
+                s"M$ox0 $oy0 L$ox1 $oy1 ${inner}L$ox0 $oy0"
               else
                 s"L$ox1 $oy1 ${inner}L$ox0 $oy0 "
             }
@@ -112,24 +111,20 @@ object Main {
 
     var sprouting: Option[Sprouting] = Some(SproutingBranch(0))
     var extended: Option[Extended] = None
-    var i = 0
 
     println("Starting!")
 
 
-    setInterval(20) {
-      extended = sprouting flatMap { _.project(ProjectContext(Vector(), 0)) }
-
-      sprouting = extended flatMap { _.grow(GrowContext(1)) }
-
-      if (i % 8 == 0) {
-        extended foreach { e =>
-          val pathData = render(RenderContext(Vector(400, 500), first = true), e)
-          elPath.setAttribute("d", pathData)
-        }
+    setInterval(100) {
+      for(_ <- 1 to 20) {
+        extended = sprouting flatMap { _.project(ProjectContext(Vector(), 0)) }
+        sprouting = extended flatMap { _.grow(GrowContext(1)) }
       }
 
-      i = i + 1
+      extended foreach { tree =>
+        val pathData = render(RenderContext(Vector(400, 500)), tree)
+        elPath.setAttribute("d", pathData)
+      }
     }
 
   }
