@@ -5,17 +5,17 @@ import scala.scalajs.js.timers._
 
 case class Vector(x: Double = 0, y: Double = 0)
 
-case class GrowContext(sap: Double)
+case class SproutContext(sap: Double)
 
-case class ProjectContext(v0: Vector, aB: Double)
+case class ExtendContext(v0: Vector, aB: Double)
 
 
 trait Sprouting {
-  def project(ctx: ProjectContext): Option[Extended]
+  def extend(ctx: ExtendContext): Option[Extended]
 }
 
 trait Extended {
-  def grow(ctx: GrowContext) : Option[Sprouting]
+  def sprout(ctx: SproutContext) : Option[Sprouting]
 }
 
 
@@ -24,12 +24,12 @@ case class ExtendedBranch(branch: SproutingBranch, v0: Vector, v1: Vector, a: Do
   private val growthRate = 0.7
   private val stature = 10
 
-  override def grow(ctx: GrowContext): Option[Sprouting] = branch match {
+  override def sprout(ctx: SproutContext): Option[Sprouting] = branch match {
     case SproutingBranch(_, _, g)  =>
       Some(branch.copy(
         g = g + (growthRate - (growthRate * Math.cos(2 * Math.sqrt((10 / stature) * g)))) / 2,
         children = {
-          val grownChildren = children flatMap { _.grow(GrowContext(1)) }
+          val grownChildren = children flatMap { _.sprout(SproutContext(1)) }
 
           if(children.isEmpty) {
             if(g > 8 && Math.random() > 0.97) {
@@ -53,8 +53,8 @@ case class ExtendedBranch(branch: SproutingBranch, v0: Vector, v1: Vector, a: Do
 
 case class SproutingBranch(aOrig: Double, children: List[Sprouting] = Nil, g: Double = 0.2) extends Sprouting {
 
-  override def project(ctx: ProjectContext): Option[Extended] = ctx match {
-    case ProjectContext(v0@Vector(x0, y0), aBase) =>
+  override def extend(ctx: ExtendContext): Option[Extended] = ctx match {
+    case ExtendContext(v0@Vector(x0, y0), aBase) =>
       val a = (aBase + aOrig) % Math.PI
 
       val v1 = Vector(
@@ -62,7 +62,7 @@ case class SproutingBranch(aOrig: Double, children: List[Sprouting] = Nil, g: Do
         y0 + (Math.cos(a) * g)
       )
 
-      Some(ExtendedBranch(this, v0, v1, a, children.flatMap { _.project(ProjectContext(v1, a)) }))
+      Some(ExtendedBranch(this, v0, v1, a, children.flatMap { _.extend(ExtendContext(v1, a)) }))
   }
 
 }
@@ -117,8 +117,8 @@ object Main {
 
     setInterval(100) {
       for(_ <- 1 to 20) {
-        extended = sprouting flatMap { _.project(ProjectContext(Vector(), 0)) }
-        sprouting = extended flatMap { _.grow(GrowContext(1)) }
+        extended = sprouting flatMap { _.extend(ExtendContext(Vector(), 0)) }
+        sprouting = extended flatMap { _.sprout(SproutContext(1)) }
       }
 
       extended foreach { tree =>
